@@ -1,41 +1,44 @@
 <?php
-  /**
-  * Requires the "PHP Email Form" library
-  * The "PHP Email Form" library is available only in the pro version of the template
-  * The library should be uploaded to: vendor/php-email-form/php-email-form.php
-  * For more info and help: https://bootstrapmade.com/php-email-form/
-  */
+require_once "forms/connection.php";
 
-  // Replace contact@example.com with your real receiving email address
-  $receiving_email_address = 'contact@example.com';
+class Contact
+{
+    private $conn;
 
-  if( file_exists($php_email_form = '../assets/vendor/php-email-form/php-email-form.php' )) {
-    include( $php_email_form );
-  } else {
-    die( 'Unable to load the "PHP Email Form" Library!');
-  }
+    public function __construct()
+    {
+        $obj = new Connexion();
+        $this->conn = $obj->getConnexion();
+    }
 
-  $contact = new PHP_Email_Form;
-  $contact->ajax = true;
-  
-  $contact->to = $receiving_email_address;
-  $contact->from_name = $_POST['name'];
-  $contact->from_email = $_POST['email'];
-  $contact->subject = $_POST['subject'];
+    public function handleFormSubmission()
+    {
+        if (isset($_POST["submit"])) {
+            $name = htmlspecialchars($_POST["name"]);
+            $email = htmlspecialchars($_POST["email"]);
+            $subject = htmlspecialchars($_POST["subject"]);
+            $message = htmlspecialchars($_POST["message"]);
 
-  // Uncomment below code if you want to use SMTP to send emails. You need to enter your correct SMTP credentials
-  /*
-  $contact->smtp = array(
-    'host' => 'example.com',
-    'username' => 'example',
-    'password' => 'pass',
-    'port' => '587'
-  );
-  */
+            // Use prepared statements to prevent SQL injection
+            $sql = "INSERT INTO Contact (name, email, subject, message) VALUES (?, ?, ?, ?)";
 
-  $contact->add_message( $_POST['name'], 'From');
-  $contact->add_message( $_POST['email'], 'Email');
-  $contact->add_message( $_POST['message'], 'Message', 10);
+            try {
+                $stmt = $this->conn->prepare($sql);
+                $stmt->execute([$name, $email, $subject, $message]);
+                echo "Record inserted successfully";
+            } catch (PDOException $e) {
+                echo "Error: " . $e->getMessage();
+            }
 
-  echo $contact->send();
+            $this->conn = null; // Close the database connection
+        }
+    }
+}
+
+// Create an instance of the Contact class
+$contactObj = new Contact();
+
+// Call the handleFormSubmission method to handle the form submission
+$contactObj->handleFormSubmission();
 ?>
+
